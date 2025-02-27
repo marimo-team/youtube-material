@@ -16,29 +16,38 @@
 import marimo
 
 __generated_with = "0.11.9"
-app = marimo.App(width="columns")
+app = marimo.App(width="medium")
 
 
-@app.cell(column=0)
-def _(pl):
-    df = pl.read_csv("examples/data/spam.csv", encoding="latin1").select(label=pl.col("v1"), text=pl.col("v2"))
-    texts = df["text"].to_list()
+@app.cell
+def _(mo):
+    mo.md("""### Bulk labelling demo""")
+    return
+
+
+@app.cell
+def _(mo, pl):
+    with mo.status.spinner(subtitle="Loading data ...") as _spinner:
+        df = pl.read_csv("examples/data/spam.csv", encoding="latin1").select(label=pl.col("v1"), text=pl.col("v2"))
+        texts = df["text"].to_list()
     return df, texts
 
 
 @app.cell
-def _(SentenceTransformer, texts):
-    tfm = SentenceTransformer("all-MiniLM-L6-v2")
-    X = tfm.encode(texts)
+def _(SentenceTransformer, mo, texts):
+    with mo.status.spinner(subtitle="Creating embeddings ...") as _spinner:
+        tfm = SentenceTransformer("all-MiniLM-L6-v2")
+        X = tfm.encode(texts)
     return X, tfm
 
 
 @app.cell
-def _(X):
-    from umap import UMAP
+def _(X, mo):
+    with mo.status.spinner(subtitle="Running UMAP ...") as _spinner:
+        from umap import UMAP
 
-    umap_tfm = UMAP()
-    X_tfm = umap_tfm.fit_transform(X)
+        umap_tfm = UMAP()
+        X_tfm = umap_tfm.fit_transform(X)
     return UMAP, X_tfm, umap_tfm
 
 
@@ -89,24 +98,14 @@ def _(chart, get_label, set_label):
     def add_label(lab):
         current_labels = get_label()
         if lab == "spam": 
-            for val in chart.value["index"]: 
-                new_spam = list(set(current_labels["spam"] + [i for i in chart.value["index"]]))
-                new_ham = [i for i in current_labels["ham"] if i != val]
+            new_ham = list(set(current_labels["ham"]).difference(chart.value["index"]))
+            new_spam = list(set(current_labels["spam"]).union(chart.value["index"]))
         if lab == "ham":
-            for val in chart.value["index"]: 
-                new_ham = list(set(current_labels["spam"] + [i for i in chart.value["index"]]))
-                new_spam = [i for i in current_labels["ham"] if i != val]
+            new_ham = list(set(current_labels["ham"]).union(chart.value["index"]))
+            new_spam = list(set(current_labels["spam"]).difference(chart.value["index"]))
 
         set_label({"spam": new_spam, "ham": new_ham})
     return (add_label,)
-
-
-@app.cell
-def _(LogisticRegression, X, get_label, np):
-    X_train = np.concat([X[get_label()["spam"]], X[get_label()["ham"]]])
-    y_train = ["spam" for i in get_label()["spam"]] + ["ham" for i in get_label()["ham"]]
-    log_reg = LogisticRegression().fit(X_train, y_train)
-    return X_train, log_reg, y_train
 
 
 @app.cell
@@ -123,8 +122,11 @@ def _(mo):
 
 
 @app.cell
-def _(labels):
+def _(df_emb, labels, mo):
     from collections import Counter
+
+    with mo.status.spinner(subtitle="Starting UI ...") as _spinner:
+        df_emb
 
     Counter(labels)
     return (Counter,)
@@ -150,10 +152,9 @@ def _():
     return
 
 
-@app.cell(column=1)
+@app.cell
 def _(df_emb, mo, scatter):
     chart = mo.ui.altair_chart(scatter(df_emb))
-    # chart
     return (chart,)
 
 
@@ -176,8 +177,6 @@ def _(alt, switch):
                range=['steelblue', 'green', 'red']
             ))
         ).properties(width=500, height=500))
-
-
     return (scatter,)
 
 
@@ -186,7 +185,7 @@ def _():
     return
 
 
-@app.cell(column=2)
+@app.cell
 def _(X, X_tfm, cosine_similarity, form, get_label, np, pl, texts, tfm):
     df_emb = (
         pl.DataFrame({
@@ -228,7 +227,7 @@ def _():
     return
 
 
-@app.cell(column=3)
+@app.cell
 def _():
     return
 
