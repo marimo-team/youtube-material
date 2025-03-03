@@ -1,21 +1,25 @@
 import marimo
 
-__generated_with = "0.11.6"
-app = marimo.App(width="medium")
+__generated_with = "0.11.9"
+app = marimo.App(width="full", layout_file="layouts/tangle.grid.json")
 
 
 @app.cell
 def _(TangleSlider, mo):
     # You need to define derivates in other cells. 
     coffees = mo.ui.anywidget(
-        TangleSlider(amount=10, min_value=0, step=1, suffix=" coffees", digits=0)
+        TangleSlider(amount=10.0, min_value=0.0, step=1, suffix=" coffees", digits=0)
     )
     price = mo.ui.anywidget(
         TangleSlider(amount=3.50, min_value=0.01, max_value=10, step=0.01, prefix="$", digits=2)
     )
+    return coffees, price
 
+
+@app.cell
+def _(coffees, price):
     total = coffees.amount * price.amount
-    return coffees, price, total
+    return (total,)
 
 
 @app.cell
@@ -45,14 +49,14 @@ def _(c, mo, prob1, prob2):
     mo.vstack([
         mo.md(f"""
         ### Amdhals law
-        
+
         You cannot always get a speedup by throwing more compute at a problem. Let's compare two scenarios. 
-        
+
         - You might have a parallel program that needs to sync up {prob1}.
         - Another parallel program needs to sync up {prob2}.
-        
+
         The consequences of these choices are shown below. You might be suprised at the result, but you need to remember that if you throw more cores at the problem then you will also have more cores that will idle when the program needs to sync. 
-        
+
         """),
         c
     ])
@@ -64,6 +68,7 @@ def _(TangleChoice, TangleSlider, mo):
     saying = mo.ui.anywidget(
         TangleChoice(["🙂", "🎉", "💥"])
     )
+
     times = mo.ui.anywidget(
         TangleSlider(min_value=1, max_value=20, step=1, suffix=" times", amount=3)
     )
@@ -75,7 +80,7 @@ def _(mo, saying, times):
     mo.md(f"""
     ### Also a choice widget 
 
-    As a quick demo, let's repeat {saying} {times}. 
+    As a quick demo, let's repeat {saying} for {times}. 
 
     {" ".join([saying.choice] * int(times.amount))}
     """
@@ -117,7 +122,6 @@ def _():
     import numpy as np
     import pandas as pd
     from wigglystuff import TangleSlider, TangleChoice
-    # await micropip.install("wigglystuff==0.1.1")
     return TangleChoice, TangleSlider, alt, micropip, mo, np, pd
 
 
