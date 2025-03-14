@@ -10,12 +10,13 @@
 #     "scikit-learn==1.6.1",
 #     "numpy==2.1.3",
 #     "mohtml==0.1.2",
+#     "model2vec==0.4.1",
 # ]
 # ///
 
 import marimo
 
-__generated_with = "0.11.9"
+__generated_with = "0.11.14"
 app = marimo.App()
 
 
@@ -66,11 +67,19 @@ def _(mo, pl, should_stop, uploaded_file, use_default_switch):
 
 
 @app.cell
-def _(SentenceTransformer, mo, texts):
+def _():
+    from model2vec import StaticModel
+
+    # Load a model from the HuggingFace hub (in this case the potion-base-8M model)
+    tfm = StaticModel.from_pretrained("minishlab/potion-base-8M")
+    return StaticModel, tfm
+
+
+@app.cell
+def _(mo, texts, tfm):
     with mo.status.spinner(subtitle="Creating embeddings ...") as _spinner:
-        tfm = SentenceTransformer("all-MiniLM-L6-v2")
         X = tfm.encode(texts)
-    return X, tfm
+    return (X,)
 
 
 @app.cell
