@@ -22,7 +22,7 @@ import marimo
 __generated_with = "0.11.22"
 app = marimo.App(
     width="columns",
-    layout_file="layouts/youtube-parser.grid.json",
+    layout_file="layouts/rocket-league.grid.json",
 )
 
 
@@ -223,8 +223,8 @@ def _(Image):
 
 
 @app.cell
-def _(ollama):
-    ollama.pull("gemma3:12b")
+def _():
+    # ollama.pull("gemma3:12b")
     return
 
 
@@ -363,6 +363,12 @@ def _():
 
 
 @app.cell
+def _(frame, resize_image):
+    resize_image(frame, max_size=300)
+    return
+
+
+@app.cell
 def _(Stats, frame, ollama, pil_to_base64, resize_image, time):
     def simulate(model, image_size=1200, schema=True):
         tic = time.time()
@@ -430,8 +436,8 @@ def _(cache, json, pl):
     )
 
     pl.DataFrame(
-        [{**json.loads(e["message"].content), "model": e["model"]} for e in stream]
-    )
+        [{"model": e["model"], "size": e["image_size"], **json.loads(e["message"].content)} for e in stream]
+    ).sort(pl.col("model"), pl.col("size"))
     return (stream,)
 
 
