@@ -19,7 +19,7 @@
 
 import marimo
 
-__generated_with = "0.11.22"
+__generated_with = "0.11.28"
 app = marimo.App(
     width="columns",
     layout_file="layouts/rocket-league.grid.json",
@@ -27,6 +27,48 @@ app = marimo.App(
 
 
 @app.cell(column=0)
+def _(Image, widths):
+    import base64
+    import io
+
+    def resize_image(image, max_size=800):
+        """
+        Resize a PIL image while maintaining aspect ratio
+
+        Args:
+            image: PIL Image object
+            max_size: Maximum width or height (whichever is larger)
+
+        Returns:
+            Resized PIL Image
+        """
+        width, height = image.size
+        ratio = max_size / widths
+
+        new_width = int(width * ratio)
+        new_height = int(height * ratio)
+
+        return image.resize((new_width, new_height), Image.LANCZOS)
+
+    def pil_to_base64(pil_image, format="JPEG"):
+        """
+        Convert a PIL Image to a base64 encoded string
+
+        Args:
+            pil_image: PIL Image object
+            format: Image format (JPEG, PNG, etc.)
+
+        Returns:
+            Base64 encoded string
+        """
+        buffered = io.BytesIO()
+        pil_image.save(buffered, format=format)
+        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
+        return img_str
+    return base64, io, pil_to_base64, resize_image
+
+
+@app.cell
 def _():
     import marimo as mo
     import matplotlib.pylab as plt
@@ -115,6 +157,12 @@ def _(frame_generator):
 
 
 @app.cell
+def _(gen):
+    next(gen)
+    return
+
+
+@app.cell
 def _():
     return
 
@@ -181,45 +229,15 @@ def _(image_size, mo, position_slider):
 
 
 @app.cell
-def _(Image):
-    import base64
-    import io
+def _():
+    146000 * 30 / 60 / 60 / 24
+    return
 
-    def resize_image(image, max_size=800):
-        """
-        Resize a PIL image while maintaining aspect ratio
 
-        Args:
-            image: PIL Image object
-            max_size: Maximum width or height (whichever is larger)
-
-        Returns:
-            Resized PIL Image
-        """
-        width, height = image.size
-        ratio = max_size / width
-
-        new_width = int(width * ratio)
-        new_height = int(height * ratio)
-
-        return image.resize((new_width, new_height), Image.LANCZOS)
-
-    def pil_to_base64(pil_image, format="JPEG"):
-        """
-        Convert a PIL Image to a base64 encoded string
-
-        Args:
-            pil_image: PIL Image object
-            format: Image format (JPEG, PNG, etc.)
-
-        Returns:
-            Base64 encoded string
-        """
-        buffered = io.BytesIO()
-        pil_image.save(buffered, format=format)
-        img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
-        return img_str
-    return base64, io, pil_to_base64, resize_image
+@app.cell
+def _(out):
+    out
+    return
 
 
 @app.cell
@@ -235,25 +253,25 @@ def _(out):
 
 
 @app.cell
-def _(mo):
-    text_area = mo.ui.text_area("Describe this image, mainly focus on the stats that are on display.", label="Prompt to use")
-    schema_checkbox = mo.ui.checkbox(label="Apply schema?")
-    model_choice = mo.ui.dropdown(value="gemma3:4b", options=["gemma3:4b", "moondream", "llava:7b", "gemma3:12b"])
+def _():
+    # text_area = mo.ui.text_area("Describe this image, mainly focus on the stats that are on display.", label="Prompt to use")
+    # schema_checkbox = mo.ui.checkbox(label="Apply schema?")
+    # model_choice = mo.ui.dropdown(value="gemma3:4b", options=["gemma3:4b", "moondream", "llava:7b", "gemma3:12b"])
 
-    form = mo.md("""
-    {text_area}
+    # form = mo.md("""
+    # {text_area}
 
-    {model_choice}
+    # {model_choice}
 
-    {schema_checkbox}
-    """).batch(
-        text_area=text_area, 
-        model_choice=model_choice, 
-        schema_checkbox=schema_checkbox, 
-    ).form()
+    # {schema_checkbox}
+    # """).batch(
+    #     text_area=text_area, 
+    #     model_choice=model_choice, 
+    #     schema_checkbox=schema_checkbox, 
+    # ).form()
 
-    form
-    return form, model_choice, schema_checkbox, text_area
+    # form
+    return
 
 
 @app.cell
@@ -308,12 +326,6 @@ def _(form, mo, pre, res):
 
     _out
     return dict_out, json
-
-
-@app.cell
-def _(out):
-    out
-    return
 
 
 @app.cell
@@ -447,6 +459,11 @@ def _():
 
 
 @app.cell
+def _():
+    return
+
+
+@app.cell(column=3)
 def _():
     return
 
