@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.11.28"
+__generated_with = "0.12.0"
 app = marimo.App(width="medium")
 
 
@@ -33,7 +33,7 @@ def _(pl):
     return (df,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(df, mo, pl):
     tbl = mo.ui.table(
         df
@@ -54,14 +54,22 @@ def _(tbl):
 
 @app.cell
 def _(df, pl, player_ids):
-    (
-        df
+    chart1 = (df
         .filter(pl.col("player_id").is_in(player_ids))
         .plot
         .line(x="datetime", y="level", color="player_id:N")
+        .properties(title="WoW players level up over time") 
+    )
+
+    chart2 = (df
+        .filter(pl.col("player_id").is_in(player_ids))
+        .plot
+        .scatter(x="datetime", y="level", color="player_id:N")
         .properties(title="WoW players level up over time")
     )
-    return
+
+    chart1 + chart2
+    return chart1, chart2
 
 
 @app.cell
@@ -177,7 +185,7 @@ def _(df, pl):
         df
         .pipe(set_types)
         .pipe(clean_data)
-        .pipe(sessionize)
+        .pipe(sessionize, threshold=30 * 60 * 1000)
         .pipe(add_features)
     )
     return add_features, cached, clean_data, remove_bots, sessionize, set_types
@@ -191,18 +199,12 @@ def _(cached, max_session_threshold, remove_bots):
     return (df_out,)
 
 
-@app.cell
+@app.cell(hide_code=True)
 def _(mo):
     session_threshold = mo.ui.slider(20, 120, 10, label="Session threshold (mins)")
     max_session_threshold = mo.ui.slider(2, 24, 1, value=24, label="Max session length (hours)")
-    mo.hstack([session_threshold, max_session_threshold])
+    mo.hstack([max_session_threshold])
     return max_session_threshold, session_threshold
-
-
-@app.cell
-def _(df_out):
-    df_out
-    return
 
 
 @app.cell
@@ -268,7 +270,7 @@ def _(pl):
         cutoff_start = pl.datetime_range(start_date, end_date, step, eager=True).alias(time_col)
         min_date = dataf[time_col].min()
         max_date = dataf[time_col].max()
-    
+
         for start in cutoff_start.to_list():
             info_period_start = start - timedelta(days=info_period)
             checking_period_end = start + timedelta(days=checking_period)
@@ -279,27 +281,31 @@ def _(pl):
             print(info_period_start, start, checking_period_end, min_date, max_date)
             train_info = dataf.filter(pl.col(time_col) < start, pl.col(time_col) >= (start - timedelta(days=info_period)))
             valid_info = dataf.filter(pl.col(time_col) >= start, pl.col(time_col) < (start + timedelta(days=checking_period)))
-        
-   
+
+
             target = valid_info.select("player_id").unique().with_columns(target=True)
 
             ml_df = (train_info
                      .pipe(feature_pipeline)
                      .join(target, on=user_id, how="left")
                      .with_columns(target=pl.when(pl.col("target")).then(True).otherwise(False)))
-        
+
             X = ml_df.drop("target", "player_id")
             y = np.array(ml_df["target"]).astype(int)
-        
+
             yield X, y
     return churn_dataset_generator, datetime, np, timedelta
 
 
 @app.cell
 def _(mo):
-    mo.md("""## Stuff can go wrong!
+    mo.md(
+        """
+        ## Stuff can go wrong!
 
-    Now for some algorithmic details""")
+        Now for some algorithmic details
+        """
+    )
     return
 
 

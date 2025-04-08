@@ -19,7 +19,7 @@
 
 import marimo
 
-__generated_with = "0.11.28"
+__generated_with = "0.12.0"
 app = marimo.App(
     width="columns",
     layout_file="layouts/rocket-league.grid.json",
@@ -27,9 +27,10 @@ app = marimo.App(
 
 
 @app.cell(column=0)
-def _(Image, widths):
+def _(Image):
     import base64
     import io
+    import time
 
     def resize_image(image, max_size=800):
         """
@@ -43,7 +44,7 @@ def _(Image, widths):
             Resized PIL Image
         """
         width, height = image.size
-        ratio = max_size / widths
+        ratio = max_size / width
 
         new_width = int(width * ratio)
         new_height = int(height * ratio)
@@ -65,7 +66,7 @@ def _(Image, widths):
         pil_image.save(buffered, format=format)
         img_str = base64.b64encode(buffered.getvalue()).decode("utf-8")
         return img_str
-    return base64, io, pil_to_base64, resize_image
+    return base64, io, pil_to_base64, resize_image, time
 
 
 @app.cell
@@ -168,7 +169,7 @@ def _():
 
 
 @app.cell(column=1, hide_code=True)
-def _(create_frame_accessor, image_size, mo, position_slider, resize_image):
+def _(create_frame_accessor, form, mo, resize_image):
     # Use the video path from your previous code
     video_path = "jfuUgT7stp0.mp4"  # The path to your downloaded video
 
@@ -183,7 +184,7 @@ def _(create_frame_accessor, image_size, mo, position_slider, resize_image):
     - Duration: {video_info['duration']:.2f} seconds
     """)
 
-    position = position_slider.value
+    position = form.value.get("position_slider", 0)
     frame = frame_accessor(position)
     out = mo.md("check video input")
 
@@ -193,7 +194,7 @@ def _(create_frame_accessor, image_size, mo, position_slider, resize_image):
 
         out = mo.vstack([
             mo.md(f"Frame: {current_frame} / {video_info['frame_count']} | Time: {current_time:.2f}s"),
-            resize_image(frame, max_size=image_size.value)
+            resize_image(frame, max_size=form.value.get("image_size", 1200))
         ])
     return (
         current_frame,
@@ -247,31 +248,31 @@ def _():
 
 
 @app.cell
-def _(out):
-    out
-    return
+def _(image_size, mo, position_slider):
+    text_area = mo.ui.text_area("Describe this image, mainly focus on the stats that are on display.", label="Prompt to use")
+    schema_checkbox = mo.ui.checkbox(label="Apply schema?")
+    model_choice = mo.ui.dropdown(value="gemma3:4b", options=["gemma3:4b", "moondream", "llava:7b", "gemma3:12b"])
 
+    form = mo.md("""
+    ## Ollama vs. Rocket League
 
-@app.cell
-def _():
-    # text_area = mo.ui.text_area("Describe this image, mainly focus on the stats that are on display.", label="Prompt to use")
-    # schema_checkbox = mo.ui.checkbox(label="Apply schema?")
-    # model_choice = mo.ui.dropdown(value="gemma3:4b", options=["gemma3:4b", "moondream", "llava:7b", "gemma3:12b"])
+    {position_slider} {image_size}
 
-    # form = mo.md("""
-    # {text_area}
+    {text_area}
 
-    # {model_choice}
+    {model_choice}
 
-    # {schema_checkbox}
-    # """).batch(
-    #     text_area=text_area, 
-    #     model_choice=model_choice, 
-    #     schema_checkbox=schema_checkbox, 
-    # ).form()
+    {schema_checkbox}
+    """).batch(
+        text_area=text_area, 
+        model_choice=model_choice, 
+        schema_checkbox=schema_checkbox, 
+        position_slider=position_slider, 
+        image_size=image_size
+    ).form()
 
-    # form
-    return
+    form
+    return form, model_choice, schema_checkbox, text_area
 
 
 @app.cell
@@ -334,102 +335,77 @@ def _():
     return p, pre
 
 
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    return
-
-
 @app.cell(column=2)
-def _(res):
-    dict(res)
+def _():
+    # dict(res)
     return
 
 
 @app.cell
 def _():
-    from diskcache import Cache
-    import time 
+    # from diskcache import Cache
+    # import time 
 
-    cache = Cache("ollama-experiments")
-    return Cache, cache, time
-
-
-@app.cell
-def _(frame, resize_image):
-    resize_image(frame, max_size=300)
+    # cache = Cache("ollama-experiments")
     return
 
 
 @app.cell
-def _(Stats, frame, ollama, pil_to_base64, resize_image, time):
-    def simulate(model, image_size=1200, schema=True):
-        tic = time.time()
-        res = ollama.chat(
-        	model=model,
-        	messages=[
-        		{
-        			'role': 'user',
-        			'content': 'Describe this image, mainly focus on the stats that are on display.',
-        			'images': [pil_to_base64(resize_image(frame, max_size=image_size))]
-        		}
-        	],
-            format=Stats.model_json_schema() if schema else None
-        )
-        toc = time.time()
-
-        return {
-            **dict(res), 
-            "image_size":image_size, 
-            "schema": schema, 
-            "time_taken": toc - tic
-        }
-    return (simulate,)
+def _():
+    # resize_image(frame, max_size=300)
+    return
 
 
 @app.cell
-def _(cache, simulate):
-    for i in range(100, 1200, 50): 
-        for schema in [True, False]:
-            for model in ["gemma3:4b", "llava:7b", "moondream", "gemma3:12b"]:
-                key = (i, schema, model)
-                if key not in cache:
-                    cache[key] = simulate(model, i, schema)
-                print(i, schema)
-    return i, key, model, schema
+def _():
+    # def simulate(model, image_size=1200, schema=True):
+    #     tic = time.time()
+    #     res = ollama.chat(
+    #     	model=model,
+    #     	messages=[
+    #     		{
+    #     			'role': 'user',
+    #     			'content': 'Describe this image, mainly focus on the stats that are on display.',
+    #     			'images': [pil_to_base64(resize_image(frame, max_size=image_size))]
+    #     		}
+    #     	],
+    #         format=Stats.model_json_schema() if schema else None
+    #     )
+    #     toc = time.time()
+
+    #     return {
+    #         **dict(res), 
+    #         "image_size":image_size, 
+    #         "schema": schema, 
+    #         "time_taken": toc - tic
+    #     }
+    return
 
 
 @app.cell
-def _(cache, pl):
-    (
-        pl.DataFrame([cache[k] for k in cache.iterkeys()])
-          .select("model", "image_size", "time_taken", "schema")
-          .plot.line(
-              x="image_size", 
-              y="time_taken", 
-              color="model", 
-              strokeDash="schema"
-          ).properties(width=520)
-    )
+def _():
+    # for i in range(100, 1200, 50): 
+    #     for schema in [True, False]:
+    #         for model in ["gemma3:4b", "llava:7b", "moondream", "gemma3:12b"]:
+    #             key = (i, schema, model)
+    #             if key not in cache:
+    #                 cache[key] = simulate(model, i, schema)
+    #             print(i, schema)
+    return
+
+
+@app.cell
+def _():
+    # (
+    #     pl.DataFrame([cache[k] for k in cache.iterkeys()])
+    #       .select("model", "image_size", "time_taken", "schema")
+    #       .plot.line(
+    #           x="image_size", 
+    #           y="time_taken", 
+    #           color="model", 
+    #           strokeDash="schema"
+    #       ).properties(width=520)
+    # )
     return
 
 
@@ -440,17 +416,17 @@ def _():
 
 
 @app.cell
-def _(cache, json, pl):
-    stream = (
-        pl.DataFrame([cache[k] for k in cache.iterkeys()])
-          .filter(pl.col("schema"))
-          .to_dicts()
-    )
+def _():
+    # stream = (
+    #     pl.DataFrame([cache[k] for k in cache.iterkeys()])
+    #       .filter(pl.col("schema"))
+    #       .to_dicts()
+    # )
 
-    pl.DataFrame(
-        [{"model": e["model"], "size": e["image_size"], **json.loads(e["message"].content)} for e in stream]
-    ).sort(pl.col("model"), pl.col("size"))
-    return (stream,)
+    # pl.DataFrame(
+    #     [{"model": e["model"], "size": e["image_size"], **json.loads(e["message"].content)} for e in stream]
+    # ).sort(pl.col("model"), pl.col("size"))
+    return
 
 
 @app.cell

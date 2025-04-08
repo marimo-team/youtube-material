@@ -35,17 +35,15 @@ def _(slider):
 
 
 @app.cell
-def _(mo, slider, text, text_area):
+def _(mo, slider, text):
     md = mo.md("""This is a simple form. 
 
     {slider}
 
     {text}
-
-    {text_area}
     """
     )
-    form = md.batch(slider=slider, text=text, text_area=text_area).form()
+    form = md.batch(slider=slider, text=text).form()
     return form, md
 
 

@@ -31,12 +31,7 @@
         "position": null
       },
       {
-        "position": [
-          0,
-          0,
-          13,
-          12
-        ]
+        "position": null
       },
       {
         "position": null
@@ -44,7 +39,7 @@
       {
         "position": [
           13,
-          5,
+          0,
           15,
           23
         ]
@@ -53,14 +48,11 @@
         "position": null
       },
       {
-        "position": null
-      },
-      {
         "position": [
           0,
-          12,
+          0,
           13,
-          17
+          21
         ]
       },
       {
@@ -69,30 +61,10 @@
       {
         "position": [
           0,
-          29,
-          8,
+          21,
+          13,
           2
         ]
-      },
-      {
-        "position": [
-          0,
-          31,
-          27,
-          34
-        ]
-      },
-      {
-        "position": null
-      },
-      {
-        "position": null
-      },
-      {
-        "position": null
-      },
-      {
-        "position": null
       },
       {
         "position": null
