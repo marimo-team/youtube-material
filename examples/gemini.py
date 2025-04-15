@@ -1,6 +1,19 @@
+# /// script
+# requires-python = ">=3.13"
+# dependencies = [
+#     "google-genai==1.10.0",
+#     "marimo",
+#     "mohtml==0.1.5",
+#     "mopaint==0.1.5",
+#     "pillow==11.1.0",
+#     "protobuf==6.30.2",
+#     "python-dotenv==1.1.0",
+# ]
+# ///
+
 import marimo
 
-__generated_with = "0.12.6"
+__generated_with = "0.12.8"
 app = marimo.App(width="columns", layout_file="layouts/gemini.grid.json")
 
 
@@ -41,12 +54,6 @@ def _():
 
 
 @app.cell
-def _(base64_to_pil, paint):
-    base64_to_pil(paint.value["base64"])
-    return
-
-
-@app.cell
 def _():
     from google import genai
     from google.genai import types
@@ -79,13 +86,19 @@ def _():
 
 
 @app.cell
+def _(base64_to_pil, paint):
+    base64_to_pil(paint.value["base64"])
+    return
+
+
+@app.cell
 def _():
     return
 
 
 @app.cell(column=1)
 def _(Paint, mo):
-    paint = mo.ui.anywidget(Paint())
+    paint = mo.ui.anywidget(Paint(keep_background=True))
     paint
     return (paint,)
 
@@ -120,7 +133,7 @@ def _(
     mo.stop(not run_btn.value, "Hit run button first")
 
     _response = client.models.generate_content(
-        model="gemini-2.0-flash-exp-image-generation",
+        model="gemini-2.0-flash-exp",
         contents=[text_input.value, base64_to_pil(paint.value["base64"])],
         config=types.GenerateContentConfig(
           response_modalities=['Text', 'Image']
