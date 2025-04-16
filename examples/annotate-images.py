@@ -57,14 +57,14 @@ def _(backend, cache, colors, replicate, uuid4):
     @cache.memoize()
     def generate_image(title, color, style, model, seed=1):
         segment = image_prompt_segment(title)
-    
+
         image_prompt = f"{segment}, {style}, no text what so ever, attention in the center"
         if color:
             image_prompt += f"a touch of {colors}"
         output = run_on_replicate(image_prompt)
-    
+
         gen_uuid = str(uuid4())
-    
+
         out_path = f'images/{gen_uuid}.webp'
 
         # Download and convert with specific output path
@@ -163,13 +163,13 @@ def _(mo):
 def _(color, mo, model, style, titles):
     form1 = mo.md("""
     ## Settings for image one
-      
+
     {color} {style} {model}
     """).batch(color=color, style=style, model=model).form()
 
     form2 = mo.md("""
     ## Settings for image two
-      
+
     {color} {style} {model}
     """).batch(color=color, style=style, model=model).form()
 
@@ -220,6 +220,146 @@ def _(general_form, generate_image, mo):
         return mo.vstack([mo.image(generate_image(general_form.value["title"], **form.value, seed=_)["image"]) 
                 for _ in range(general_form.value["n_images"])])
     return (show_imgs,)
+
+
+@app.cell
+def _():
+    full_titles = ["Meta's Antitrust Trial: Zuckerberg's Tech Empire Under Scrutiny","DIY AI Butler: A Hacker's Guide to Personal Digital Assistance","AI Skin Cancer Checks: London Hospital Pioneers New Diagnostic Approach","Google Embraces MCP: The New Frontier of AI Interaction","Google's AI Takes a Dive: Decoding Dolphin Dialogue","Meilisearch: The Rust-Powered Search Engine Making Waves in Tech Circles","From Startup to Payments Giant: Stripe's Decade of Digital Transformation","Cure ID: The Digital Matchmaker for Drug Repurposing","Firefox's AI Link Previews: Innovation or Unnecessary Complexity?","GitHub Copilot Flaw Reveals Hidden Risks in AI Coding Assistants"]
+    return (full_titles,)
+
+
+@app.cell
+def _(Cache, backend, full_titles):
+    cache_prompt = Cache("prompt-img-cache")
+
+    @cache_prompt.memoize()
+    @backend("gpt-3.5-turbo")
+    def image_prompt_segment1(title): 
+            """This is the title of a newspaper article that needs an image: {{title}}. This needs to be represented visually. I am looking for a single word, maybe two, that could be taken from this title that could be used to generate an image that reflects the theme. The phrase should convey a visual meaning."""
+
+    @cache_prompt.memoize()
+    @backend("gpt-3.5-turbo")
+    def image_prompt_segment2(title): 
+            """This is the title of a newspaper article that needs an image: {{title}}. If you could use two words to describe that you're seeing here, what would you use?"""
+
+    for _title in full_titles: 
+        image_prompt_segment1(_title)
+        image_prompt_segment2(_title)
+    return cache_prompt, image_prompt_segment1, image_prompt_segment2
+
+
+@app.cell
+def _(cache_prompt):
+    cache_out = [(k[0], k[1], cache_prompt[k]) for k in cache_prompt.iterkeys()]
+    stream = []
+
+    for prompt, title, result in cache_out:
+        stream.append({
+            "prompt": prompt, 
+            "inputs": {"title": title},
+            "result": result
+        })
+    return cache_out, prompt, result, stream, title
+
+
+@app.cell
+def _(stream):
+    import polars as pl
+
+    df_stream = pl.DataFrame(stream).group_by("prompt", "inputs").agg(pl.col("result").explode())
+    annot_stream = (_ for _ in 
+        df_stream
+          .join(df_stream, on=["inputs"], how="left")
+          .select(
+              "inputs",
+              pl.col("prompt").alias("prompt_left"),
+              pl.col("result").alias("result_left"),
+              "prompt_right",
+              "result_right"
+          )
+          .filter(pl.col("prompt_left") != pl.col("prompt_right"))
+          .explode("result_left", "result_right")
+          .sample(fraction=1, shuffle=True)
+          .to_dicts()
+    )
+    return annot_stream, df_stream, pl
+
+
+@app.cell
+def _(btn_left, btn_right, btn_skip, get_example, mo, text_input):
+    from mohtml import div
+
+    mo.vstack([
+        mo.md("####" + get_example()["inputs"]["title"]),
+        mo.vstack([
+            get_example()["result_left"],
+            btn_left,
+        ]),
+        mo.vstack([
+            get_example()["result_right"],
+            btn_right,
+        ]),
+        mo.md("<br>"),
+        mo.vstack([
+            text_input,
+            btn_skip,
+        ])
+    ])
+    return (div,)
+
+
+@app.cell
+def _(mo, update):
+    btn_left = mo.ui.button(label="left", keyboard_shortcut="Ctrl-j", on_change=lambda d: update("left"))
+    btn_right = mo.ui.button(label="right", keyboard_shortcut="Ctrl-l", on_change=lambda d: update("right"))
+    btn_skip = mo.ui.button(label="skip", keyboard_shortcut="Ctrl-k", on_change=lambda d: update("skip"))
+    return btn_left, btn_right, btn_skip
+
+
+@app.cell
+def _(mo):
+    text_input = mo.ui.text(label="alternative")
+    return (text_input,)
+
+
+@app.cell
+def _(annot_stream, mo):
+    get_example, set_example = mo.state(next(annot_stream))
+    get_annot, set_annot = mo.state([])
+    return get_annot, get_example, set_annot, set_example
+
+
+@app.cell
+def _(get_annot, pl):
+    pick_expr = pl.when(pl.col("outcome") == "left").then(pl.col("prompt_left")).otherwise(pl.col("prompt_right"))
+
+    (
+        pl.DataFrame(get_annot())
+          .filter(pl.col("outcome") != "skip")
+          .with_columns(best=pick_expr)
+          .group_by("best")
+          .len()
+    )
+    return (pick_expr,)
+
+
+@app.cell
+def _(
+    annot_stream,
+    get_annot,
+    get_example,
+    set_annot,
+    set_example,
+    text_input,
+):
+    def update(outcome):
+        ex = get_example()
+        ex["outcome"] = outcome
+        if outcome == "skip":
+            ex["alternative"] = text_input.value
+        set_annot(get_annot() + [ex])
+        set_example(next(annot_stream))
+    return (update,)
 
 
 @app.cell

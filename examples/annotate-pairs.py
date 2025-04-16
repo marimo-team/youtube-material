@@ -31,33 +31,29 @@ def _():
 
 
 @app.cell
-def _(Cache, llm):
+def _(Cache, llm, prompts, topics):
     model = llm.get_model("gpt-4")
-    cache = Cache("joke-prompts")
+    cache = Cache("naming-prompts")
 
     @cache.memoize()
-    def joke(prompt, topic, seed):
+    def haiku(prompt, topic, seed):
         return model.prompt(prompt.format(topic=topic, seed=seed)).text()
-    return cache, joke, model
+
+    for _t in topics:
+        for _p in prompts:
+            for _i in range(4):
+                haiku(prompt=_p, topic=_t, seed=_i)
+    return cache, haiku, model
 
 
 @app.cell
 def _():
     prompts = [
-        "seed={seed} Write me a joke about {topic}",
-        "seed={seed} Write me a hilarous joke about {topic} that would really do well on social media. Go against hype and be a bit self deprecating."
+        "seed={seed} Write me a haiku about {topic}",
+        "seed={seed} Write me a funny haiku about {topic} that rhymes."
     ]
-    topics = ["python", "databases"]
+    topics = ["python library", "new databases"]
     return prompts, topics
-
-
-@app.cell
-def _(joke, prompts, topics):
-    for _t in topics:
-        for _p in prompts:
-            for _i in range(4):
-                joke(prompt=_p, topic=_t, seed=_i)
-    return
 
 
 @app.cell
@@ -102,8 +98,8 @@ def _(stream):
 
 
 @app.cell
-def _(annot_stream, pl):
-    pl.DataFrame(annot_stream)
+def _():
+    # pl.DataFrame(annot_stream)
     return
 
 
@@ -153,99 +149,13 @@ def _(annot_stream, mo):
 
 
 @app.cell
-def _(get_annot, pl):
-    pl.DataFrame(get_annot())
+def _(get_annot):
+    get_annot()
     return
 
 
 @app.cell
-def _(mo):
-    mo.iframe("""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Key Press Detector</title>
-        <style>
-            body {
-                font-family: Arial, sans-serif;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                margin: 0;
-                background-color: #f0f0f0;
-            }
-            .container {
-                text-align: center;
-                padding: 2rem;
-                background-color: white;
-                border-radius: 10px;
-                box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-                width: 80%;
-                max-width: 500px;
-            }
-            .key-display {
-                font-size: 5rem;
-                font-weight: bold;
-                height: 120px;
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                margin: 1rem 0;
-                background-color: #f8f8f8;
-                border-radius: 5px;
-                border: 1px solid #ddd;
-            }
-            .info {
-                margin-bottom: 1rem;
-                color: #555;
-            }
-            .info-meta {
-                font-size: 0.8rem;
-                color: #888;
-                margin-top: 2rem;
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>Key Press Detector</h1>
-            <div class="info">Press any key on your keyboard</div>
-            <div class="key-display" id="keyDisplay">?</div>
-            <div id="keyInfo">Press a key to start</div>
-            <div class="info-meta">Click anywhere on the page first if keys aren't detected</div>
-        </div>
-
-        <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                const keyDisplay = document.getElementById('keyDisplay');
-                const keyInfo = document.getElementById('keyInfo');
-
-                document.addEventListener('keydown', function(event) {
-                    // Prevent default behavior for some keys
-                    event.preventDefault();
-
-                    // Display the key
-                    if (event.key === ' ') {
-                        keyDisplay.textContent = 'Space';
-                    } else if (event.key === 'Escape') {
-                        keyDisplay.textContent = 'Esc';
-                    } else if (event.key.length === 1) {
-                        keyDisplay.textContent = event.key;
-                    } else {
-                        keyDisplay.textContent = event.key;
-                    }
-
-                    // Show key information
-                    keyInfo.textContent = `Key: ${event.key} | Code: ${event.code} | KeyCode: ${event.keyCode}`;
-                });
-            });
-        </script>
-    </body>
-    </html>
-    """)
+def _():
     return
 
 
