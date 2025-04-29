@@ -13,8 +13,8 @@
 
 import marimo
 
-__generated_with = "0.12.8"
-app = marimo.App(width="columns", layout_file="layouts/gemini.grid.json")
+__generated_with = "0.13.0"
+app = marimo.App(width="columns", layout_file="layouts/gemini-paint.grid.json")
 
 
 @app.cell(column=0)
@@ -50,7 +50,7 @@ def _():
         img = Image.open(BytesIO(img_data))
 
         return img
-    return BytesIO, Image, base64, base64_to_pil
+    return BytesIO, Image, base64_to_pil
 
 
 @app.cell
@@ -64,7 +64,46 @@ def _():
     load_dotenv(".env")
 
     client = genai.Client(api_key=os.environ.get("GOOGLE_API_KEY"))
-    return PIL, client, genai, load_dotenv, os, types
+    return client, types
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell
+def _():
+    return
+
+
+@app.cell(column=1, hide_code=True)
+def _(mo):
+    from mohtml import p, tailwind_css, div
+
+    checkbox = mo.ui.checkbox(label="background setting")
+    checkbox
+    return checkbox, p
+
+
+@app.cell
+def _(Paint, checkbox, mo):
+    paint = mo.ui.anywidget(Paint(keep_background=checkbox.value))
+    paint
+    return (paint,)
+
+
+@app.cell
+def _(mo):
+    text_input = mo.ui.text_area(label="prompt", value="Turns this doodle and make it realisitic looking")
+    text_input
+    return (text_input,)
+
+
+@app.cell(column=2)
+def _(base64_to_pil, paint):
+    base64_to_pil(paint.value["base64"])
+    return
 
 
 @app.cell
@@ -76,31 +115,7 @@ def _(base64_to_pil, client, mo, p, paint, run_btn):
         contents=["What is this image?", base64_to_pil(paint.value["base64"])])
 
     p(response.text)
-    return (response,)
-
-
-@app.cell
-def _():
-    from mohtml import p
-    return (p,)
-
-
-@app.cell
-def _(base64_to_pil, paint):
-    base64_to_pil(paint.value["base64"])
     return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell(column=1)
-def _(Paint, mo):
-    paint = mo.ui.anywidget(Paint(keep_background=True))
-    paint
-    return (paint,)
 
 
 @app.cell
@@ -108,13 +123,6 @@ def _(mo):
     run_btn = mo.ui.run_button()
     run_btn
     return (run_btn,)
-
-
-@app.cell
-def _(mo):
-    text_input = mo.ui.text_area(label="prompt", value="Turns this doodle and make it realisitic looking")
-    text_input
-    return (text_input,)
 
 
 @app.cell
@@ -133,10 +141,10 @@ def _(
     mo.stop(not run_btn.value, "Hit run button first")
 
     _response = client.models.generate_content(
-        model="gemini-2.0-flash-exp",
+        model="gemini-2.0-flash",
         contents=[text_input.value, base64_to_pil(paint.value["base64"])],
         config=types.GenerateContentConfig(
-          response_modalities=['Text', 'Image']
+          response_modalities=['Text']
         )
     )
 
@@ -152,11 +160,6 @@ def _(
         p(part.text),
         image
     ])
-    return image, part
-
-
-@app.cell
-def _():
     return
 
 
