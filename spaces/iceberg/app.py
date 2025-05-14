@@ -106,7 +106,7 @@ def _(IdentityTransform, PartitionField, PartitionSpec):
     spec = PartitionSpec(
         PartitionField(source_id=3, field_id=1000, name="passenger_count", transform=IdentityTransform())
     )
-    return
+    return (spec,)
 
 
 @app.cell
@@ -116,12 +116,13 @@ def _(df_taxi):
 
 
 @app.cell
-def _(catalog, df_taxi):
+def _(catalog, df_taxi, spec):
     catalog.create_namespace_if_not_exists("default")
 
     table = catalog.create_table_if_not_exists(
         "default.taxi",
         schema=df_taxi.schema,
+        partition_spec=spec
     )
     return (table,)
 
