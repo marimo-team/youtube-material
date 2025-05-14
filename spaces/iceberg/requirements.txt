@@ -1,0 +1,5 @@
+marimo
+# Or a specific version
+# marimo>=0.9.0
+
+# Add other dependencies as needed
