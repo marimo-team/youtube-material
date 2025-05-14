@@ -68,7 +68,7 @@ def _(df_taxi):
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""Let's now take this pyarrow dataframe and prepare it for insertion. We want to extract the right schema and also add a partition. """)
+    mo.md(r"""Let's now take this pyarrow dataframe and prepare it for insertion. We want to extract the right schema and also add a partition.""")
     return
 
 
@@ -98,26 +98,30 @@ def _(df_taxi):
     source_id = passenger_count_field.field_id
 
     print(f"The source_id for 'passenger_count' is: {source_id}")
-    return (iceberg_schema,)
+    return
 
 
 @app.cell
 def _(IdentityTransform, PartitionField, PartitionSpec):
     spec = PartitionSpec(
-        PartitionField(
-            source_id=4, field_id=1000, name="passenger_count", transform=IdentityTransform())
+        PartitionField(source_id=3, field_id=1000, name="passenger_count", transform=IdentityTransform())
     )
-    return (spec,)
+    return
 
 
 @app.cell
-def _(catalog, iceberg_schema, spec):
+def _(df_taxi):
+    df_taxi.schema
+    return
+
+
+@app.cell
+def _(catalog, df_taxi):
     catalog.create_namespace_if_not_exists("default")
 
     table = catalog.create_table_if_not_exists(
         "default.taxi",
-        schema=iceberg_schema,
-        partition_spec=spec
+        schema=df_taxi.schema,
     )
     return (table,)
 
