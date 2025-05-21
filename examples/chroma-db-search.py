@@ -194,10 +194,16 @@ def _(collection):
 
 @app.cell
 def _(collection, model, query_ui):
-    result = collection.query(model.encode(query_ui.value), n_results=100)
+    result = collection.query(model.encode(query_ui.value), n_results=100, include=["embeddings", "metadatas", "documents"])
     urls = [_["url"] for _ in result["metadatas"][0]][::-1]
     res_docs = result["documents"][0][::-1]
-    return res_docs, urls
+    return res_docs, result, urls
+
+
+@app.cell
+def _(result):
+    result
+    return
 
 
 @app.cell
