@@ -30,36 +30,34 @@ def _():
 
 @app.cell
 def _():
-    import duckdb
-    import os
-    from dotenv import load_dotenv
-
-    load_dotenv(".env")
-
-    _password = os.environ.get("MOTHERDUCK_API_KEY")
-    conn = duckdb.connect("md:marimo-demos", config={"motherduck_token": _password})
-    return (conn,)
-
-
-@app.cell
-def _(ambient_air_quality, conn, mo, sample_data):
-    _df = mo.sql(
-        f"""
-        SELECT * FROM sample_data.who.ambient_air_quality;
-        """,
-        engine=conn
-    )
     return
 
 
 @app.cell
-def _(ambient_air_quality, conn, mo, sample_data):
+def _():
+    import duckdb
+    import os
+
+    conn = duckdb.connect("md:marimo-demos")
+    return (conn,)
+
+
+@app.cell
+def _(mo):
+    slider = mo.ui.slider(1, 10, 1)
+    slider
+    return (slider,)
+
+
+@app.cell(hide_code=True)
+def _(ambient_air_quality, conn, mo, sample_data, slider):
     _df = mo.sql(
         f"""
-        SELECT *
-        FROM sample_data.who.ambient_air_quality
-        WHERE iso3 = 'NLD'
-        ORDER BY year
+        SELECT
+            *
+        FROM
+            sample_data.who.ambient_air_quality
+        limit {slider.value}
         """,
         engine=conn
     )
@@ -134,6 +132,25 @@ def _(conn, mo, mydb, summary_movie):
     return
 
 
+@app.cell
+def _(conn, mo, movies, sample_data):
+    _df = mo.sql(
+        f"""
+        SELECT
+            *,
+            array_cosine_similarity(overview_embeddings, title_embeddings) as sim
+        FROM
+            sample_data.kaggle.movies
+        order by
+            sim desc
+        LIMIT
+            100
+        """,
+        engine=conn
+    )
+    return
+
+
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(
@@ -178,6 +195,12 @@ def _(conn, mo, session_slider, wowfull):
         engine=conn
     )
     return (df_sess,)
+
+
+@app.cell
+def _():
+    import pytest
+    return
 
 
 @app.cell
@@ -262,7 +285,9 @@ def _(df_level, dropdown):
 
 @app.cell
 def _(df_level, dropdown, pl):
-    df_level.group_by(dropdown.value).agg(pl.col("average_hours_played").sum().alias("average_total_hours")).sort("average_total_hours", descending=True)
+    df_level.group_by(dropdown.value).agg(
+        pl.col("average_hours_played").sum().alias("average_total_hours")
+    ).sort("average_total_hours", descending=True)
     return
 
 
