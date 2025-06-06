@@ -8,6 +8,7 @@
 #     "numpy==2.2.6",
 #     "pandas==2.2.3",
 #     "pillow==11.2.1",
+#     "pyarrow==20.0.0",
 #     "scikit-learn==1.6.1",
 #     "scipy==1.15.3",
 #     "torch==2.7.0",
@@ -19,7 +20,7 @@
 import marimo
 
 __generated_with = "0.12.8"
-app = marimo.App(width="medium")
+app = marimo.App()
 
 
 @app.cell(hide_code=True)
@@ -200,7 +201,7 @@ def _():
             x=alt.X("x:Q"),
             y=alt.Y("y:Q"),
             color=alt.Color("name:N"),
-        ).properties(width=500, height=500))
+        ).properties(width=500, height=300))
     return alt, scatter
 
 
@@ -214,16 +215,13 @@ def _(mo):
 def _(embedding_df, scatter):
     import marimo as mo
     chart = mo.ui.altair_chart(scatter(embedding_df))
-    chart
     return chart, mo
 
 
-app._unparsable_cell(
-    r"""
-    When you select points in the scatterplot, Marimo automatically passes those indices into this cell. Here, we render a preview of the corresponding face images using `matplotlib`, along with a table of all selected metadata — making it easy to inspect clustering quality or outliers at a glance.
-    """,
-    column=None, disabled=False, hide_code=True, name="_"
-)
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(r"""When you select points in the scatterplot, Marimo automatically passes those indices into this cell. Here, we render a preview of the corresponding face images using `matplotlib`, along with a table of all selected metadata — making it easy to inspect clustering quality or outliers at a glance.""")
+    return
 
 
 @app.cell
@@ -234,11 +232,7 @@ def _(chart, mo):
 
 @app.cell
 def _(X, chart, h, mo, table, w):
-    # show 10 images: either the first 10 from the selection, or the first ten
-    # selected in the table
-    mo.stop(not len(chart.value))
-
-    def show_images(indices, max_images=10):
+    def show_images(indices, max_images=6):
         import matplotlib.pyplot as plt
 
         indices = indices[:max_images]
@@ -257,24 +251,20 @@ def _(X, chart, h, mo, table, w):
         plt.tight_layout()
         return fig
 
-    selected_images = (
-        show_images(list(chart.value["index"]))
-        if not len(table.value)
-        else show_images(list(table.value["index"]))
-    )
+    def show_selected():
+        return (
+            show_images(list(chart.value["index"]))
+            if not len(table.value)
+            else show_images(list(table.value["index"]))
+        )
 
-    mo.md(
-        f"""
-        **Here's a preview of the images you've selected**:
+    mo.hstack([chart, show_selected() if len(chart.value) else ""])
+    return show_images, show_selected
 
-        {mo.as_html(selected_images)}
 
-        Here's all the data you've selected.
-
-        {table}
-        """
-    )
-    return selected_images, show_images
+@app.cell
+def _():
+    return
 
 
 if __name__ == "__main__":

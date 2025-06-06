@@ -10,7 +10,7 @@
 
 import marimo
 
-__generated_with = "0.13.10"
+__generated_with = "0.13.11"
 app = marimo.App(width="full")
 
 
@@ -43,6 +43,18 @@ def _():
     )
 
 
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+    ## Introduction 
+
+    This bit is here to allow one to explain the basics of the syntax/objects.
+    """
+    )
+    return
+
+
 @app.cell
 async def _(Agent):
     _agent = Agent("openai:gpt-4o")
@@ -58,6 +70,18 @@ async def _(Agent):
 @app.cell
 def _(agent_run):
     print(agent_run.result.output)
+    return
+
+
+@app.cell(hide_code=True)
+def _(mo):
+    mo.md(
+        r"""
+    ## Towards forms 
+
+    Conversational forms were always a tricky bit back when I worked over at Rasa and I am keen to see if perhaps they are easier now with the new tech. The goal is to understand when the user is done with an order but also to make sure that the order is in fact complete. It's great that we know that the user wants to order two pizzas, but we also need to know what kind of pizza and what size. We also need to inform the user if a certain pizza cannot be made at their pizza restaurant.
+    """
+    )
     return
 
 
@@ -91,9 +115,7 @@ async def _(Agent, End, Pizza, pprint):
 @app.cell
 def _(BaseModel, Field, Literal, Optional):
     class Pizza(BaseModel):
-        kind: Optional[str] = Field(
-            description="The type of pizza that the user wants to order"
-        )
+        kind: Optional[str] = Field(description="The type of pizza that the user wants to order")
         size: Optional[Literal["small", "medium", "large"]] = Field(
             description="The size of pizza that the user wants to order"
         )
@@ -108,16 +130,18 @@ def _(BaseModel, Field, Literal, Optional):
 def _(Agent, Literal, Optional, PizzaOrder, RunContext, dataclass):
     from pydantic_ai.messages import ModelMessage
 
+
     @dataclass
     class OrderDependencies:
         customer_id: int
         allowed_pizzas: Literal["hawai", "veggie", "pepperoni"]
         order: Optional[PizzaOrder]
 
+
     pizza_agent = Agent(
         "openai:gpt-4o",
         output_type=PizzaOrder,
-        deps_type=PizzaOrder, 
+        deps_type=PizzaOrder,
         system_prompt="Your need to figure out what the user is trying to order. It could be that a user is changing their order with new information",
     )
 
@@ -128,10 +152,12 @@ def _(Agent, Literal, Optional, PizzaOrder, RunContext, dataclass):
         system_prompt="It is your job to figure out if the order is complete or if the user needs to provide additional information. If the order is complete you can just pass the pizza order that we received.",
     )
 
+
     @order_agent.system_prompt
     def what_to_check_for(ctx: RunContext[OrderDependencies]) -> str:
         possible_pizzas: list[str] = ctx.deps.allowed_pizzas
         return f"These are the possible pizzas for the store: {possible_pizzas}. It could be that we have to do some fuzzy matching. Only do the fuzzy matching if it is clear that we should match, if there is no match we can also leave the pizza kind open. If the user gives us new information, update our belief but do not throw away old preferences. If we know the size, but get a new kind, we need to remember the old size."
+
 
     @order_agent.system_prompt
     def what_to_check_for(ctx: RunContext[OrderDependencies]) -> str:
@@ -144,6 +170,7 @@ def _(Agent, Literal, Optional, PizzaOrder, RunContext, dataclass):
 def _(OrderDependencies, mo, order_agent, pizza_agent):
     deps = OrderDependencies(customer_id=123, allowed_pizzas=["hawai", "veggie"], order=None)
     get_state, set_state = mo.state(None)
+
 
     async def do_a_turn(msg):
         print(msg)

@@ -19,12 +19,6 @@
         "position": null
       },
       {
-        "position": null
-      },
-      {
-        "position": null
-      },
-      {
         "position": [
           0,
           0,
@@ -66,6 +60,12 @@
           13,
           20
         ]
+      },
+      {
+        "position": null
+      },
+      {
+        "position": null
       }
     ]
   }

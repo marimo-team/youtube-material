@@ -19,7 +19,7 @@
 
 import marimo
 
-__generated_with = "0.12.8"
+__generated_with = "0.12.9"
 app = marimo.App()
 
 
@@ -110,6 +110,12 @@ def _(mo, text_input):
         model = whisper.load_model("base")
         result = model.transcribe(f"{text_input.value[-11:]}.m4a")
     return model, result, whisper
+
+
+@app.cell
+def _(result):
+    print(result)
+    return
 
 
 @app.cell

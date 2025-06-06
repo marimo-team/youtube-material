@@ -1,6 +1,6 @@
 import marimo
 
-__generated_with = "0.12.0"
+__generated_with = "0.13.11"
 app = marimo.App(width="medium")
 
 
@@ -11,17 +11,17 @@ def _():
     import altair as alt
 
     alt.data_transformers.disable_max_rows()
-    return alt, mo, pl
+    return mo, pl
 
 
 @app.cell
 def _(mo):
     mo.md(
         """
-        ## Playing around with polars and WoW
+    ## Playing around with polars and WoW
 
-        This notebook has a fun dataset that we will explore with polars, altair and friends. To get started though, you'll want to download [this dataset](https://github.com/koaning/wow-avatar-datasets/blob/main/wow-full.parquet) manually beforehand.
-        """
+    This notebook has a fun dataset that we will explore with polars, altair and friends. To get started though, you'll want to download [this dataset](https://github.com/koaning/wow-avatar-datasets/blob/main/wow-full.parquet) manually beforehand.
+    """
     )
     return
 
@@ -69,7 +69,7 @@ def _(df, pl, player_ids):
     )
 
     chart1 + chart2
-    return chart1, chart2
+    return
 
 
 @app.cell
@@ -113,7 +113,7 @@ def _(df, pl):
     )
 
     df_time_taken_guild.plot.line(x="level", y="hours_per_char", color="guild:N")
-    return (df_time_taken_guild,)
+    return
 
 
 @app.cell
@@ -188,7 +188,7 @@ def _(df, pl):
         .pipe(sessionize, threshold=30 * 60 * 1000)
         .pipe(add_features)
     )
-    return add_features, cached, clean_data, remove_bots, sessionize, set_types
+    return cached, remove_bots
 
 
 @app.cell
@@ -204,7 +204,7 @@ def _(mo):
     session_threshold = mo.ui.slider(20, 120, 10, label="Session threshold (mins)")
     max_session_threshold = mo.ui.slider(2, 24, 1, value=24, label="Max session length (hours)")
     mo.hstack([max_session_threshold])
-    return max_session_threshold, session_threshold
+    return (max_session_threshold,)
 
 
 @app.cell
@@ -237,7 +237,7 @@ def _(df, df_out, pl):
         )
 
     plot_per_date(df, df_out)
-    return (plot_per_date,)
+    return
 
 
 @app.cell(hide_code=True)
@@ -294,17 +294,17 @@ def _(pl):
             y = np.array(ml_df["target"]).astype(int)
 
             yield X, y
-    return churn_dataset_generator, datetime, np, timedelta
+    return churn_dataset_generator, datetime, np
 
 
 @app.cell
 def _(mo):
     mo.md(
         """
-        ## Stuff can go wrong!
+    ## Stuff can go wrong!
 
-        Now for some algorithmic details
-        """
+    Now for some algorithmic details
+    """
     )
     return
 
@@ -323,17 +323,9 @@ def _():
     formula = norm_feats + ohe_feats
     pipe = make_pipeline(formula, LogisticRegression(max_iter=1000))
     return (
-        LogisticRegression,
-        StandardScaler,
         accuracy_score,
         cross_validate,
-        feats,
-        formula,
-        make_pipeline,
         make_scorer,
-        norm_feats,
-        ohe_feats,
-        onehot,
         pipe,
         precision_score,
         recall_score,
@@ -381,7 +373,7 @@ def _(build_sklearn_feats, datetime, df_out, np, pipe, pl):
     X_train, X_test, y_train, y_test = train_test_split(X_out, y_out)
 
     np.mean(pipe.fit(X_train, y_train).predict(X_test) == y_test)
-    return X_out, X_test, X_train, train_test_split, y_out, y_test, y_train
+    return
 
 
 @app.cell
@@ -417,7 +409,7 @@ def _(
         batches.append(
             pl.DataFrame({k: list(v) for k, v in out.items()}).with_columns(batch=pl.lit(batch + 1))
         )
-    return X, batch, batches, gen, out, scorers, y
+    return (batches,)
 
 
 @app.cell

@@ -17,7 +17,7 @@
 
 import marimo
 
-__generated_with = "0.13.3"
+__generated_with = "0.13.8"
 app = marimo.App(width="columns")
 
 
@@ -35,6 +35,12 @@ def _():
     dataset = load_dataset("m3hrdadfi/recipe_nlg_lite")
     print(dataset)
     return dataset, mo
+
+
+@app.cell
+def _(text_train):
+    text_train
+    return
 
 
 @app.cell
@@ -67,7 +73,51 @@ def _(text_test, text_train):
 
     y_train = to_label(text_train, words_of_interest)
     y_test = to_label(text_test, words_of_interest)
-    return words_of_interest, y_test, y_train
+    return np, words_of_interest, y_test, y_train
+
+
+@app.cell
+def _(nn, torch):
+    class SimpleFeedForward(nn.Module):
+        def __init__(self, input_size, hidden_size, num_classes):
+            super(SimpleFeedForward, self).__init__()
+            self.fc1 = nn.Linear(input_size, hidden_size)
+            self.relu = nn.ReLU()
+            self.fc2 = nn.Linear(hidden_size, hidden_size)
+            self.relu = nn.ReLU()
+            self.fc3 = nn.Linear(hidden_size, num_classes)
+
+        def forward(self, x):
+            out = self.fc1(x)
+            out = self.relu(out)
+            out = self.fc2(out)
+            out = self.relu(out)
+            out = self.fc3(out)
+            return torch.sigmoid(out)
+    return (SimpleFeedForward,)
+
+
+@app.cell
+def _():
+    from sklearn.metrics import precision_score, recall_score, accuracy_score
+    from mohtml import table, th, tr, td, tailwind_css, p
+    import polars as pl
+    import altair as alt
+    import torch
+    import torch.nn as nn
+    import torch.optim as optim
+
+    tailwind_css()
+    return (
+        accuracy_score,
+        alt,
+        nn,
+        optim,
+        pl,
+        precision_score,
+        recall_score,
+        torch,
+    )
 
 
 @app.cell
@@ -93,8 +143,8 @@ def _(
     plot_epoch_loss,
     plot_epoch_precision,
     precision_score,
-    precision_widget,
     recall_score,
+    test_precision_widget,
     torch,
     words_of_interest,
     y_test,
@@ -156,7 +206,7 @@ def _(
         metric_data.extend(performance(X_train_tensor, y_train_tensor, epoch=epoch, group="test"))
 
         loss_widget.src = plot_epoch_loss(loss_data)
-        precision_widget.src = plot_epoch_precision(metric_data)
+        test_precision_widget.src = plot_epoch_precision(metric_data, kind="test")
     return
 
 
@@ -169,50 +219,6 @@ def _(alt, altair2svg, pl):
     return
 
 
-@app.cell
-def _():
-    from sklearn.metrics import precision_score, recall_score, accuracy_score
-    from mohtml import table, th, tr, td, tailwind_css, p
-    import polars as pl
-    import altair as alt
-    import torch
-    import torch.nn as nn
-    import torch.optim as optim
-
-    tailwind_css()
-    return (
-        accuracy_score,
-        alt,
-        nn,
-        optim,
-        pl,
-        precision_score,
-        recall_score,
-        torch,
-    )
-
-
-@app.cell
-def _(nn, torch):
-    class SimpleFeedForward(nn.Module):
-        def __init__(self, input_size, hidden_size, num_classes):
-            super(SimpleFeedForward, self).__init__()
-            self.fc1 = nn.Linear(input_size, hidden_size)
-            self.relu = nn.ReLU()
-            self.fc2 = nn.Linear(hidden_size, hidden_size)
-            self.relu = nn.ReLU()
-            self.fc3 = nn.Linear(hidden_size, num_classes)
-
-        def forward(self, x):
-            out = self.fc1(x)
-            out = self.relu(out)
-            out = self.fc2(out)
-            out = self.relu(out)
-            out = self.fc3(out)
-            return torch.sigmoid(out)
-    return (SimpleFeedForward,)
-
-
 @app.cell(column=2, hide_code=True)
 def _(mo):
     mo.md(r"""## Views""")
@@ -220,11 +226,14 @@ def _(mo):
 
 
 @app.cell
-def _(loss_widget, mo, precision_widget):
-    mo.hstack([
-        loss_widget, 
-        precision_widget
-    ])
+def _(loss_widget):
+    loss_widget
+    return
+
+
+@app.cell
+def _(test_precision_widget):
+    test_precision_widget
     return
 
 
@@ -234,14 +243,15 @@ def _():
     import matplotlib.pylab as plt
 
     loss_widget = ImageRefreshWidget()
-    precision_widget = ImageRefreshWidget()
+    test_precision_widget = ImageRefreshWidget()
     return (
         HTMLRefreshWidget,
+        ImageRefreshWidget,
         altair2svg,
         loss_widget,
         plt,
-        precision_widget,
         refresh_matplotlib,
+        test_precision_widget,
     )
 
 
@@ -263,14 +273,14 @@ def _(plt, refresh_matplotlib, words_of_interest):
         plt.legend()
 
     @refresh_matplotlib
-    def plot_epoch_precision(data):
+    def plot_epoch_precision(data, kind="train"):
         for _word in words_of_interest:
             plt.plot(
-                [_["epoch"] for _ in data if _["group"] == "test" and _["word"] == _word], 
-                [_["value"] for _ in data if _["group"] == "test" and _["word"] == _word],
+                [_["epoch"] for _ in data if _["group"] == kind and _["word"] == _word], 
+                [_["value"] for _ in data if _["group"] == kind and _["word"] == _word],
                 label=_word
             )
-        plt.title("test precision over epochs")
+        plt.title(f"{kind} precision over epochs")
         plt.legend()
     return plot_epoch_loss, plot_epoch_precision
 
@@ -283,6 +293,37 @@ def _(HTMLRefreshWidget):
 
 
 @app.cell(column=3)
+def _(ImageRefreshWidget):
+    pi_widget = ImageRefreshWidget(src="")
+    pi_widget
+    return (pi_widget,)
+
+
+@app.cell
+def _(pi_widget, plot_sim):
+    import random
+
+    xy = []
+    for _i in range(10000):
+        xy.append([random.random(), random.random()])
+        if _i % 50:
+            pi_widget.src = plot_sim(xy)
+    return
+
+
+@app.cell
+def _(np, plt, refresh_matplotlib):
+    @refresh_matplotlib
+    def plot_sim(data):
+        x = np.array(data)
+        c = np.sqrt(x[:, 0]**2 + x[:, 1]**2) <= 1
+        plt.figure(figsize=(5, 5))
+        plt.scatter(x[:, 0], x[:, 1], c=c, s=5)
+        plt.title(f"{np.mean(c)*100:.2f}% pi = {np.mean(c)*4:.2f}")
+    return (plot_sim,)
+
+
+@app.cell(column=4)
 def _():
     return
 

@@ -11,7 +11,7 @@
 
 import marimo
 
-__generated_with = "0.13.7"
+__generated_with = "0.13.11"
 app = marimo.App(width="full")
 
 
@@ -44,7 +44,7 @@ def _():
 
 @app.cell
 def _(pl):
-    df_taxi = pl.read_csv("yellow_tripdata_2015-01.csv").to_arrow()
+    df_taxi = pl.read_csv("spaces/iceberg/kyellow_tripdata_2015-01.csv").to_arrow()
     return (df_taxi,)
 
 
@@ -102,25 +102,25 @@ def _(catalog):
 
 @app.cell
 def _(pl):
-    pl.scan_csv("yellow_tripdata_2015-01.csv").group_by("passenger_count").len().sort("passenger_count").collect()
+    pl.scan_csv("spaces/iceberg/yellow_tripdata_2015-01.csv").group_by("passenger_count").len().sort("passenger_count").collect()
     return
 
 
 @app.cell
 def _(pl):
-    pl.read_csv("yellow_tripdata_2015-01.csv").group_by("passenger_count").len().sort("passenger_count")
+    pl.read_csv("spaces/iceberg/yellow_tripdata_2015-01.csv").group_by("passenger_count").len().sort("passenger_count")
     return
 
 
 @app.cell(hide_code=True)
 def _(mo):
-    mo.md(r"""The partition is great, but the comparison with `read_csv` is a bit unfair. Let's convert the `.csv` file to `.parquet` and also add a partition in polars with statistics. """)
+    mo.md(r"""The partition is great, but the comparison with `read_csv` is a bit unfair. Let's convert the `.csv` file to `.parquet` and also add a partition in polars with statistics.""")
     return
 
 
 @app.cell
 def _(pl):
-    pl.read_csv("yellow_tripdata_2015-01.csv").write_parquet("taxi.parquet", partition_by=["passenger_count"], statistics=True)
+    pl.read_csv("spaces/iceberg/yellow_tripdata_2015-01.csv").write_parquet("taxi.parquet", partition_by=["passenger_count"], statistics=True)
     return
 
 

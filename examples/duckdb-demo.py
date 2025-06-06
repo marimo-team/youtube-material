@@ -7,12 +7,13 @@
 #     "sqlglot==26.14.0",
 #     "polars[pyarrow]==1.27.1",
 #     "altair==5.5.0",
+#     "pytest==8.3.5",
 # ]
 # ///
 
 import marimo
 
-__generated_with = "0.12.10"
+__generated_with = "0.13.6"
 app = marimo.App(width="medium")
 
 
@@ -33,19 +34,19 @@ def _(duckdb, initialize_database):
 
     DATABASE_URL = "webshop.db"
     engine = duckdb.connect(DATABASE_URL, read_only=True)
-    return DATABASE_URL, Path, engine, file_map
+    return (engine,)
 
 
 @app.cell(hide_code=True)
 def _(mo):
     mo.md(
         """
-        ## Ecommerce dataset
+    ## Ecommerce dataset
 
-        Let's explore DuckDB by exploring [this dataset on Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce?resource=download).
+    Let's explore DuckDB by exploring [this dataset on Kaggle](https://www.kaggle.com/datasets/olistbr/brazilian-ecommerce?resource=download).
 
-        ![](https://i.imgur.com/HRhd2Y0.png)
-        """
+    ![](https://i.imgur.com/HRhd2Y0.png)
+    """
     )
     return
 
@@ -97,67 +98,7 @@ def _():
 @app.cell
 def _():
     import polars as pl
-    return (pl,)
-
-
-@app.cell
-def _(p):
-    p
     return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _():
-    return
-
-
-@app.cell
-def _(engine, mo):
-    df_joined = mo.sql(
-        f"""
-        SELECT 
-            -- Order details
-            o.*,
-            -- Order item details
-            oi.*,
-            -- Product details
-            p.
-
-        FROM olist_orders o
-        INNER JOIN olist_order_items oi 
-            ON o.order_id = oi.order_id
-        INNER JOIN olist_products p 
-            ON oi.product_id = p.product_id
-
-        -- Ensure we only get completed orders for better recommendations
-        WHERE o.order_status = 'delivered'
-
-        -- Order by customer and purchase timestamp for time-based recommendations
-        ORDER BY o.customer_id, o.order_purchase_timestamp;
-        """,
-        engine=engine
-    )
-    return (df_joined,)
 
 
 @app.cell
@@ -227,7 +168,7 @@ def _(pltr):
     )
 
     final_chart
-    return alt, base, final_chart, histogram, legend
+    return (alt,)
 
 
 @app.cell
@@ -269,50 +210,25 @@ def _(alt, df_time):
 
 
 @app.cell
-def _():
+def _(df_time, engine, mo):
+    def test_unique_dates():
+        out = mo.sql(
+            """
+            SELECT * FROM df_time
+            """,
+            engine=engine
+        )
+        assert out["delivery_date"].n_unique() == out.shape[0]
     return
 
 
 @app.cell
-def _(engine, mo, olist_customers, olist_orders):
+def _(df_time, mo):
     _df = mo.sql(
         f"""
-        WITH delivery_performance AS (
-            SELECT 
-                o.order_id,
-                c.customer_state,
-                c.customer_city,
-                CASE 
-                    WHEN DATE_DIFF('day', o.order_delivered_customer_date, o.order_estimated_delivery_date) > 0 THEN 'Early'
-                    WHEN DATE_DIFF('day', o.order_delivered_customer_date, o.order_estimated_delivery_date) = 0 THEN 'On Time'
-                    ELSE 'Late'
-                END as delivery_status,
-                DATE_DIFF('day', o.order_approved_at, o.order_delivered_customer_date) as actual_delivery_days
-            FROM olist_orders o
-            JOIN olist_customers c ON o.customer_id = c.customer_id
-            WHERE 
-                o.order_status = 'delivered'
-                AND o.order_delivered_customer_date IS NOT NULL
-                AND o.order_estimated_delivery_date IS NOT NULL
-        )
-        SELECT 
-            customer_state,
-            COUNT(*) as total_orders,
-            ROUND(AVG(actual_delivery_days), 1) as avg_delivery_days,
-            ROUND(100.0 * COUNT(CASE WHEN delivery_status = 'Late' THEN 1 END) / COUNT(*), 2) as pct_late,
-            ROUND(100.0 * COUNT(CASE WHEN delivery_status = 'Early' THEN 1 END) / COUNT(*), 2) as pct_early,
-            ROUND(100.0 * COUNT(CASE WHEN delivery_status = 'On Time' THEN 1 END) / COUNT(*), 2) as pct_ontime
-        FROM delivery_performance
-        GROUP BY customer_state
-        ORDER BY pct_late DESC;
-        """,
-        engine=engine
+        SELECT * FROM df_time
+        """
     )
-    return
-
-
-@app.cell
-def _():
     return
 
 
