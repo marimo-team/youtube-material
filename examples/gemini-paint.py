@@ -4,7 +4,7 @@
 #     "google-genai==1.10.0",
 #     "marimo",
 #     "mohtml==0.1.5",
-#     "mopaint==0.1.6",
+#     "mopaint==0.2.1",
 #     "pillow==11.1.0",
 #     "protobuf==6.30.2",
 #     "python-dotenv==1.1.0",
@@ -13,14 +13,14 @@
 
 import marimo
 
-__generated_with = "0.13.11"
-app = marimo.App(width="columns", layout_file="layouts/gemini-paint.grid.json")
+__generated_with = "0.14.0"
+app = marimo.App(width="columns")
 
 
 @app.cell(column=0, hide_code=True)
 def _():
     from mohtml import p, tailwind_css, div, span
-    return div, p, span
+    return
 
 
 @app.cell
@@ -57,7 +57,31 @@ def _():
         img = Image.open(BytesIO(img_data))
 
         return img
-    return BytesIO, Image, base64_to_pil
+
+    def pil_to_image_bytes(pil_image):
+        """Convert a PIL Image object to bytes.
+
+        Args:
+            pil_image (PIL.Image): The PIL Image object
+
+        Returns:
+            bytes: The image converted to bytes
+        """
+        # Create a BytesIO object
+        img_byte_arr = BytesIO()
+
+        # Convert RGBA to RGB if the image has an alpha channel
+        if pil_image.mode == 'RGBA':
+            pil_image = pil_image.convert('RGB')
+
+        # Save the image to the BytesIO object in JPEG format
+        pil_image.save(img_byte_arr, format='JPEG')
+
+        # Get the bytes from the BytesIO object
+        image_bytes = img_byte_arr.getvalue()
+
+        return image_bytes
+    return base64_to_pil, pil_to_image_bytes
 
 
 @app.cell
@@ -74,9 +98,14 @@ def _():
     return client, types
 
 
+@app.cell
+def _():
+    return
+
+
 @app.cell(column=1)
 def _(Paint, mo):
-    paint = mo.ui.anywidget(Paint(store_background=True))
+    paint = mo.ui.anywidget(Paint())
     paint
     return (paint,)
 
@@ -95,36 +124,39 @@ def _(base64_to_pil, paint):
 
 
 @app.cell(hide_code=True)
-def _(
-    BytesIO,
-    Image,
-    base64_to_pil,
-    client,
-    div,
-    mo,
-    p,
-    paint,
-    run_btn,
-    span,
-    text_input,
-    types,
-):
+def _(client, mo, paint, pil_to_image_bytes, run_btn, text_input, types):
     mo.stop(not run_btn.value, "Hit run button first")
 
-    _response = client.models.generate_content(
-        model="gemini-2.0-flash",
-        contents=[text_input.value, base64_to_pil(paint.value["base64"])],
-        config=types.GenerateContentConfig(response_modalities=["Text"]),
+    # from google.genai import types
+
+
+    response = client.models.generate_content(
+    model='gemini-2.5-flash',
+    contents=[
+      types.Part.from_bytes(
+        data=pil_to_image_bytes(paint.get_pil()),
+        mime_type='image/jpeg',
+      ),
+      text_input.value
+    ]
     )
 
-    for part in _response.candidates[0].content.parts:
-        if part.text is not None:
-            print(part.text)
-        image = None
-        if part.inline_data is not None:
-            image = Image.open(BytesIO((part.inline_data.data)))
+    print(response.text)
 
-    div(span("Prompt response:", klass="font-bold"), p(part.text))
+    # _response = client.models.generate_content(
+    #     model="gemini-2.0-flash",
+    #     contents=[text_input.value, base64_to_pil(paint.value["base64"])],
+    #     config=types.GenerateContentConfig(response_modalities=["Text"]),
+    # )
+
+    # for part in _response.candidates[0].content.parts:
+    #     if part.text is not None:
+    #         print(part.text)
+    #     image = None
+    #     if part.inline_data is not None:
+    #         image = Image.open(BytesIO((part.inline_data.data)))
+
+    # div(span("Prompt response:", klass="font-bold"), p(part.text))
     return
 
 
