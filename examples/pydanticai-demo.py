@@ -1,6 +1,8 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
+#     "drawdata==0.3.8",
+#     "logfire==3.22.1",
 #     "marimo",
 #     "pydantic==2.11.4",
 #     "pydantic-ai==0.2.6",
@@ -10,11 +12,11 @@
 
 import marimo
 
-__generated_with = "0.13.11"
-app = marimo.App(width="full")
+__generated_with = "0.14.10"
+app = marimo.App(width="columns")
 
 
-@app.cell
+@app.cell(column=0)
 def _():
     import marimo as mo
     return (mo,)
@@ -30,17 +32,7 @@ def _():
     from pydantic_graph import End
     from pprint import pprint
     from typing import Optional, Literal
-    return (
-        Agent,
-        BaseModel,
-        End,
-        Field,
-        Literal,
-        Optional,
-        RunContext,
-        dataclass,
-        pprint,
-    )
+    return Agent, BaseModel, Field, Literal
 
 
 @app.cell(hide_code=True)
@@ -56,150 +48,73 @@ def _(mo):
 
 
 @app.cell
-async def _(Agent):
-    _agent = Agent("openai:gpt-4o")
+def _():
+    import logfire
 
-    nodes = []
-    async with _agent.iter("What is the capital of France?") as agent_run:
-        async for node in agent_run:
-            nodes.append(node)
-    nodes
-    return (agent_run,)
-
-
-@app.cell
-def _(agent_run):
-    print(agent_run.result.output)
-    return
-
-
-@app.cell(hide_code=True)
-def _(mo):
-    mo.md(
-        r"""
-    ## Towards forms 
-
-    Conversational forms were always a tricky bit back when I worked over at Rasa and I am keen to see if perhaps they are easier now with the new tech. The goal is to understand when the user is done with an order but also to make sure that the order is in fact complete. It's great that we know that the user wants to order two pizzas, but we also need to know what kind of pizza and what size. We also need to inform the user if a certain pizza cannot be made at their pizza restaurant.
-    """
-    )
+    logfire.configure()
+    logfire.instrument_pydantic_ai()
     return
 
 
 @app.cell
-async def _(Agent, End, Pizza, pprint):
-    _agent = Agent("openai:gpt-4o", output_type=Pizza)
-
-
-    async def _main():
-        async with _agent.iter("I want to order one medium hawai pizzas.") as agent_run:
-            node = agent_run.next_node
-
-            all_nodes = [node]
-
-            # Drive the iteration manually:
-            while not isinstance(node, End):
-                node = await agent_run.next(node)
-                # I could try and intervene here. I should check the store the user wants to order from
-                # and I should also check if the pizza is available that that store. Python can do it
-                # but PydanticAI offers another mechanism for this.
-                pprint(node)
-                all_nodes.append(node)
-
-            return all_nodes
-
-
-    resp = await _main()
-    return
-
-
-@app.cell
-def _(BaseModel, Field, Literal, Optional):
+def _(BaseModel, Field, Literal):
     class Pizza(BaseModel):
-        kind: Optional[str] = Field(description="The type of pizza that the user wants to order")
-        size: Optional[Literal["small", "medium", "large"]] = Field(
+        flavour: str
+        """The type of pizza that the user wants to order"""
+        size: Literal["small", "medium", "large"] = Field(
             description="The size of pizza that the user wants to order"
         )
-
-
-    class PizzaOrder(BaseModel):
-        pizzas: Optional[list[Pizza]]
-    return Pizza, PizzaOrder
+    return (Pizza,)
 
 
 @app.cell
-def _(Agent, Literal, Optional, PizzaOrder, RunContext, dataclass):
-    from pydantic_ai.messages import ModelMessage
-
-
-    @dataclass
-    class OrderDependencies:
-        customer_id: int
-        allowed_pizzas: Literal["hawai", "veggie", "pepperoni"]
-        order: Optional[PizzaOrder]
-
-
-    pizza_agent = Agent(
-        "openai:gpt-4o",
-        output_type=PizzaOrder,
-        deps_type=PizzaOrder,
-        system_prompt="Your need to figure out what the user is trying to order. It could be that a user is changing their order with new information",
-    )
-
-    order_agent = Agent(
-        "openai:gpt-4o",
-        output_type=PizzaOrder | str,
-        deps_type=PizzaOrder,
-        system_prompt="It is your job to figure out if the order is complete or if the user needs to provide additional information. If the order is complete you can just pass the pizza order that we received.",
+def _(Agent, Pizza):
+    agent = Agent(
+        "openai:gpt-4.1",
+        output_type=list[Pizza] | str,
+        instructions="You are here to detect pizza purchases from the user. If the user does not ask for a pizza then you have to ask.",
     )
 
 
-    @order_agent.system_prompt
-    def what_to_check_for(ctx: RunContext[OrderDependencies]) -> str:
-        possible_pizzas: list[str] = ctx.deps.allowed_pizzas
-        return f"These are the possible pizzas for the store: {possible_pizzas}. It could be that we have to do some fuzzy matching. Only do the fuzzy matching if it is clear that we should match, if there is no match we can also leave the pizza kind open. If the user gives us new information, update our belief but do not throw away old preferences. If we know the size, but get a new kind, we need to remember the old size."
-
-
-    @order_agent.system_prompt
-    def what_to_check_for(ctx: RunContext[OrderDependencies]) -> str:
-        possible_pizzas: list[str] = ctx.deps.allowed_pizzas
-        return f"These are the possible pizzas for the store: {possible_pizzas}. This is the order that we received: {ctx.deps.order.model_dump()}. You need to check if this order is possible in our store. If not, very briefly explain why and try to be helpful."
-    return OrderDependencies, order_agent, pizza_agent
+    @agent.tool_plain
+    def flavour_by_location(location: str):
+        """Always check the location of the user to make sure they order a correct pizza."""
+        if len(location) > 5:
+            return ["veggie"]
+        else:
+            return ["chocolatte", "nutella"]
+    return (agent,)
 
 
 @app.cell
-def _(OrderDependencies, mo, order_agent, pizza_agent):
-    deps = OrderDependencies(customer_id=123, allowed_pizzas=["hawai", "veggie"], order=None)
-    get_state, set_state = mo.state(None)
+def _(agent):
+    from pydantic_ai.messages import ModelResponse, ModelRequest, UserPromptPart, TextPart
 
 
-    async def do_a_turn(msg):
-        print(msg)
-        deps.order = get_state()
-        r1 = await pizza_agent.run(msg, deps=deps)
-        deps.order = r1.output
-        set_state(r1.output)
-        r2 = await order_agent.run(
-            f"Is there any issue with my current order? {deps.order.model_dump()}.", deps=deps
-        )
-        msg_out = r2.output
-        if not isinstance(r2.output, str):
-            msg_out = f"All good. Will proceed with the order for {r2.output.model_dump()}"
-            set_state(r2.output)
-        return msg_out
-    return do_a_turn, get_state
+    async def handle_pydantic_ai(messages):
+        message_history = []
+        for m in messages:
+            if m.role == "assistant":
+                message_history.append(ModelResponse(parts=[TextPart(m.content)]))
+            if m.role == "user":
+                message_history.append(ModelRequest(parts=[UserPromptPart(m.content)]))
+
+        resp = await agent.run(message_history=message_history)
+        print(resp)
+        return resp.output
+    return (handle_pydantic_ai,)
 
 
-@app.cell
-def _(get_state):
-    get_state()
-    return
-
-
-@app.cell
-def _(do_a_turn, mo):
-    chat = mo.ui.chat(lambda messages: do_a_turn(messages[-1].content))
+@app.cell(column=1)
+def _(handle_pydantic_ai, mo):
+    chat = mo.ui.chat(handle_pydantic_ai)
     chat
     return (chat,)
+
+
+@app.cell(column=2)
+def _():
+    return
 
 
 @app.cell
