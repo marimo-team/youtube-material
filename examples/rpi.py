@@ -45,9 +45,7 @@ def _(mo, sample):
 @app.cell
 def _(get_state, sample, set_state):
     def read_moar():
-        state = get_state()
-        state.append(sample())
-        set_state(state[-200:])
+        set_state(lambda s: (s + [sample()])[-200:])
     return (read_moar,)
 
 
